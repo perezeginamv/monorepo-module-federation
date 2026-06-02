@@ -1,0 +1,84 @@
+import { ModuleOptions } from "webpack";
+import MiniCssExtractPlugin from "mini-css-extract-plugin";
+import { BuildOptions } from "./types/types";
+import ReactRefreshTypeScript from 'react-refresh-typescript'
+
+export function buildLoaders(options: BuildOptions): ModuleOptions['rules'] {
+    const isDev = options.mode === 'development'
+
+    const assetLoader = {
+        test: /\.(png|jpg|jpeg|gif)$/i,
+        type: 'asset/resource',
+    }
+
+    const svgLoader = {
+        test: /\.svg$/,
+        use: [
+            {
+                loader: '@svgr/webpack',
+                options: {
+                    icon: true, // для работы с ICON
+                    svgoConfig: {
+                        plugins: [
+                            {
+                                name: 'convertColors',
+                                params: {
+                                    currentColor: true
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        ],
+    }
+
+    const cssLoaderWithModules = {
+        loader: 'css-loader',
+        options: {
+            module: {
+                localIdentName: isDev ? '[path][name]__[local]' : '[hash:base64:8]',
+            },
+        }
+    }
+
+    const scssLoader = {
+        test: /\.s[ac]ss$/i,
+        use: [
+            // Creates `style` nodes from JS strings
+            isDev ? 'style-loader' : MiniCssExtractPlugin.loader,
+            // Translates CSS into CommonJS
+            "css-loader",
+            // Compiles Sass to CSS
+            "sass-loader",
+        ],
+    }
+    const tsLoader = {
+        //ts-loader умеет работать с JSX
+        //Если б мы не использовали тайпскрипт: нужен был бы babel-loader
+        test: /\.tsx?$/,
+        use: [
+            {
+                loader: "ts-loader",
+                options: {
+                    transpileOnly: true,
+                    getCustomTransformers: () => ({
+                        before: [isDev && ReactRefreshTypeScript()].filter(Boolean)
+                    })
+                },
+            }
+
+        ],
+        exclude: /node_modules/,
+    }
+
+    // const babelLoader = buildBabelLoader(options)
+
+    return [
+        assetLoader,
+        scssLoader,
+        tsLoader,
+        // babelLoader,
+        svgLoader
+    ]
+}
